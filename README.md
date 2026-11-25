@@ -77,6 +77,7 @@ uv run factory approve my-app            # answer a pending gate (architecture /
 uv run factory status my-app
 uv run factory stop my-app               # kill switch (--clear to release)
 uv run factory verify my-app             # verify the evidence chain
+uv run factory dashboard my-app          # live dashboard on http://127.0.0.1:8765
 ```
 
 Projects are created in `projects/<name>` (each its own git repo); orchestrator state, evidence and agent transcripts in `state/<name>`. Per-project overrides (models, budgets, timeouts) go in `state/<name>/config.json`.

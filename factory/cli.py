@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from factory import gates, git
 from factory.agents import chat
 from factory.config import PRD_PATH, RULES_FILE, Project
+from factory.dashboard import serve
 from factory.pipeline import Factory, HaltError, ask_human, ensure_gitignore
 
 if TYPE_CHECKING:
@@ -158,6 +159,9 @@ def main() -> None:
         sp.add_argument("project")
         if name == "stop":
             sp.add_argument("--clear", action="store_true", help="release the kill switch")
+    dash = sub.add_parser("dashboard", help="live read-only dashboard on 127.0.0.1")
+    dash.add_argument("project")
+    dash.add_argument("--port", type=int, default=8765)
     new = sub.add_parser("new", help="create a project")
     new.add_argument("project")
     new.add_argument("--autonomy", type=int, choices=range(4), default=1)
@@ -174,6 +178,7 @@ def main() -> None:
         "status": lambda: cmd_status(p),
         "verify": lambda: cmd_verify(p),
         "stop": lambda: cmd_stop(p, clear=args.clear),
+        "dashboard": lambda: serve(p, args.port),
     }
     sys.exit(commands[args.cmd]())
 

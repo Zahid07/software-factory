@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from factory import config, git, pipeline, sandbox
+from factory import config, dashboard, git, pipeline, sandbox
 from factory.agents import AgentResult
 from factory.cli import cmd_new
 from factory.config import Project, load_rules
@@ -182,3 +182,19 @@ def test_git_control_tampering_halts(project: Project, monkeypatch: pytest.Monke
     f.state["phase"] = "architecture"
     assert f.run() == 2
     assert "A1" in project.inbox.read_text()
+
+
+def test_dashboard_snapshot(project: Project, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pipeline, "run_agent", ScriptedAgents())
+    write(project.dir, "docs/prd.md", "# PRD\nAC-1.1 greets\n")
+    git.stage_all(project.dir)
+    git.commit(project.dir, "prd")
+    f = Factory(project)
+    f.state["phase"] = "architecture"
+    f.run()
+    snap = dashboard.snapshot(project)
+    assert snap["phase"] == "done"
+    assert snap["chain"] == "intact"
+    assert snap["tasks"][0]["status"] == "merged"
+    assert snap["events"][0]["seq"] > snap["events"][-1]["seq"]  # newest first
+    assert any(e["detail"].get("violations") for e in snap["events"])
