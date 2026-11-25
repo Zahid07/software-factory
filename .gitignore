@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+# generated projects have their own git repos; orchestrator state/evidence stays local
+projects/
+state/

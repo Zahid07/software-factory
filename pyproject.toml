@@ -1,0 +1,49 @@
+[project]
+name = "software-factory"
+version = "0.1.0"
+description = "Autonomous multi-agent software factory with code-enforced rules"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+factory = "factory.cli:main"
+sbx = "factory.sandbox:main"
+
+[dependency-groups]
+dev = ["ruff==0.14.6", "mypy==1.18.2", "pytest==8.4.2"]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["factory"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",       # docstrings: required only where intent isn't obvious
+    "COM812",  # conflicts with the formatter
+    "S603",    # subprocess without shell is the point; inputs are validated
+    "S607",    # git/docker/claude are resolved from PATH by design
+    "T201",    # this is a CLI; print is the UI
+    "EM101", "EM102", "TRY003",  # plain exception messages are fine
+    "PLR2004", # thresholds come from rules.json, small literals are fine
+    "PLR0913", # keyword-only options are clearer than option objects here
+]
+
+[tool.ruff.lint.per-file-ignores]
+"factory/sandbox.py" = ["S108"]  # /tmp is a tmpfs inside the container, not the host
+"tests/**" = ["S101", "INP001", "PLR2004", "ANN", "C901"]  # scripted fakes are long by nature
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["factory", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
