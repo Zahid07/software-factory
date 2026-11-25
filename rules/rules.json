@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "principles": [
+    "Every rule is enforced by code. Prompts explain rules; they never enforce them.",
+    "Fail closed: a check that errors, times out or returns something unexpected is a FAIL.",
+    "Rules are technology-agnostic. The Tech Lead picks the tools; the thresholds here are fixed.",
+    "Agents never change rules. Only a human-approved commit to rules/ does."
+  ],
+  "enforced_by_legend": {
+    "factory": "Enforced by the orchestrator itself (board, gates, sandbox, evidence store).",
+    "project": "Tech Lead must map it to a check in docs/enforcement-map.json, proven by a canary violation.",
+    "platform": "Enforced by GitHub settings once the project is pushed; emulated by the orchestrator locally."
+  },
+  "rules": [
+    {"id": "A1", "layer": "all", "enforced_by": "factory", "rule": "Each agent role runs with only the tools and write paths its role definition grants."},
+    {"id": "A2", "layer": "all", "enforced_by": "factory", "rule": "No agent approves its own work; the reviewer is always a different role from the author."},
+    {"id": "A3", "layer": "all", "enforced_by": "platform", "rule": "No agent pushes or merges to main. Only the orchestrator merges, after all gates pass."},
+    {"id": "A4", "layer": "all", "enforced_by": "factory", "rule": "Protected paths (rules/, .github/, CODEOWNERS, .gitignore, locked check configs, the PRD) cannot be changed by agents outside their ownership."},
+    {"id": "A5", "layer": "all", "enforced_by": "factory", "rule": "The Product Manager has no write access to code; web content is untrusted data and reaches the team only through the PRD."},
+    {"id": "A6", "layer": "all", "enforced_by": "factory", "rule": "Agents never receive production secrets. Sandboxes get no host credentials."},
+
+    {"id": "B1", "layer": "all", "enforced_by": "factory", "rule": "Tasks move only open -> claimed -> in_progress -> ci -> review -> approved -> merged (or -> halted). Any other transition is rejected."},
+    {"id": "B2", "layer": "all", "enforced_by": "factory", "rule": "A task is claimable only when all its dependencies are merged."},
+    {"id": "B3", "layer": "all", "enforced_by": "factory", "rule": "One task per branch. Changes outside the task's declared paths are rejected."},
+    {"id": "B5", "layer": "all", "enforced_by": "factory", "rule": "Every task and commit references its requirement IDs."},
+
+    {"id": "C1", "layer": "all", "enforced_by": "project", "rule": "Lint, format, strict type checking and layer-boundary checks report zero errors."},
+    {"id": "C2", "layer": "all", "enforced_by": "factory", "rule": "No suppression comments or skipped/focused tests (noqa, type: ignore, eslint-disable, ts-ignore, skip, only, nolint, nosec, ...)."},
+    {"id": "C3", "layer": "all", "enforced_by": "project", "rule": "Line coverage stays at or above the threshold.", "threshold": {"env": "FACTORY_COVERAGE_MIN", "value": 85}},
+    {"id": "C4", "layer": "all", "enforced_by": "factory", "rule": "Tests cannot be weakened: no deleted test files, no net removal of assertions, without an approved change request."},
+    {"id": "C5", "layer": "all", "enforced_by": "factory", "rule": "Tests are owned by the Test Author. Developers cannot edit test files."},
+    {"id": "C6", "layer": "all", "enforced_by": "project", "rule": "Dependencies are pinned with a lockfile and use allowed licenses; new dependencies need an approved change request."},
+    {"id": "C7", "layer": "all", "enforced_by": "project", "rule": "Static security analysis and secret scanning report zero high/critical findings.", "threshold": {"env": "FACTORY_MAX_HIGH_VULNS", "value": 0}},
+    {"id": "C8", "layer": "all", "enforced_by": "project", "rule": "Implementations match the contracts (API spec, data schema, design tokens). Breaking contract changes fail."},
+    {"id": "C9", "layer": "all", "enforced_by": "project", "rule": "All unit and integration tests pass."},
+
+    {"id": "D1", "layer": "all", "enforced_by": "factory", "rule": "Review starts only after all checks are green."},
+    {"id": "D2", "layer": "all", "enforced_by": "factory", "rule": "Every review finding cites a rule ID, requirement ID, ADR or contract. Findings without one are discarded."},
+    {"id": "D3", "layer": "all", "enforced_by": "factory", "rule": "Reviewers run in a fresh context, on the reviewer model, without the author's reasoning."},
+    {"id": "D4", "layer": "all", "enforced_by": "factory", "rule": "An approval without a complete evidence record is invalid."},
+    {"id": "D5", "layer": "all", "enforced_by": "factory", "rule": "At most N review rounds per task, then escalate to the Tech Lead, then halt.", "threshold": {"env": "FACTORY_MAX_REVIEW_ROUNDS", "value": 3}},
+
+    {"id": "E1", "layer": "all", "enforced_by": "factory", "rule": "Decisions outside the agent's own task and all assumptions are logged in the decision schema."},
+    {"id": "E2", "layer": "all", "enforced_by": "factory", "rule": "Contracts, schemas, dependencies and ADRs change only through an approved change request, decided by the Tech Lead."},
+
+    {"id": "F1", "layer": "all", "enforced_by": "factory", "rule": "Every command runs in a fresh container that is destroyed afterwards."},
+    {"id": "F2", "layer": "all", "enforced_by": "factory", "rule": "Containers drop all capabilities, forbid privilege escalation and never mount the Docker socket."},
+    {"id": "F3", "layer": "all", "enforced_by": "factory", "rule": "Network is off by default; only declared dependency-install commands get network."},
+    {"id": "F4", "layer": "all", "enforced_by": "factory", "rule": "CPU, memory, process-count and wall-clock limits on every container."},
+    {"id": "F5", "layer": "all", "enforced_by": "factory", "rule": "Sandbox images are pinned to an explicit tag (never 'latest')."},
+
+    {"id": "G1", "layer": "all", "enforced_by": "factory", "rule": "Each task has a cost budget; exceeding it halts the task."},
+    {"id": "G2", "layer": "all", "enforced_by": "factory", "rule": "Each run has a global cost budget; exceeding it halts the factory."},
+    {"id": "G3", "layer": "all", "enforced_by": "factory", "rule": "At most N check-fix retries per task.", "threshold": {"env": "FACTORY_MAX_CI_RETRIES", "value": 4}},
+    {"id": "G4", "layer": "all", "enforced_by": "factory", "rule": "At most N change requests per task.", "threshold": {"env": "FACTORY_MAX_CHANGE_REQUESTS", "value": 2}},
+
+    {"id": "H1", "layer": "all", "enforced_by": "factory", "rule": "The evidence store is append-only and lives outside every agent's reach."},
+    {"id": "H2", "layer": "all", "enforced_by": "factory", "rule": "Each evidence record carries commit SHA, timestamp and the hash of the previous record; a broken chain halts the factory."},
+    {"id": "H3", "layer": "all", "enforced_by": "factory", "rule": "Every agent run's prompt and output are retained."},
+    {"id": "H4", "layer": "all", "enforced_by": "factory", "rule": "Every FR/NFR/SEC requirement ID is referenced by at least one test before release."},
+
+    {"id": "I1", "layer": "all", "enforced_by": "project", "rule": "An integration/E2E check runs the whole system together and passes before release."},
+    {"id": "I3", "layer": "data", "enforced_by": "project", "rule": "Database migrations are backward compatible (expand/contract); destructive migrations need a human."},
+
+    {"id": "J1", "layer": "all", "enforced_by": "factory", "rule": "A kill switch (factory stop) halts all agents before their next step."},
+    {"id": "J2", "layer": "all", "enforced_by": "factory", "rule": "The factory halts itself on: global budget exceeded, too many halted tasks, broken evidence chain, failing checks on main.", "threshold": {"env": "FACTORY_MAX_HALTED_RATIO", "value": 0.3}},
+    {"id": "J3", "layer": "all", "enforced_by": "factory", "rule": "Every halt writes a plain-language note to the Product Manager inbox for the human."},
+
+    {"id": "K1", "layer": "all", "enforced_by": "factory", "rule": "Agents can never change the rules. Rule changes need a human."},
+
+    {"id": "M1", "layer": "all", "enforced_by": "factory", "rule": "Every applicable 'project' rule maps to a check. Unmapped applicable rules block the build phase."},
+    {"id": "M2", "layer": "all", "enforced_by": "factory", "rule": "Every check must pass on the clean tree AND fail on a planted canary violation. A check that passes the canary is treated as missing."},
+    {"id": "M3", "layer": "all", "enforced_by": "factory", "rule": "The Tech Lead picks tools but cannot change thresholds; checks read thresholds from FACTORY_* environment variables."},
+    {"id": "M4", "layer": "all", "enforced_by": "factory", "rule": "The Cybersecurity Expert approves the enforcement map before building starts."},
+
+    {"id": "L1.1", "layer": "frontend", "enforced_by": "project", "rule": "Styles use design tokens only: no raw colour, spacing, typography or z-index values."},
+    {"id": "L1.2", "layer": "frontend", "enforced_by": "project", "rule": "UI is built from the project's component library; no ad-hoc duplicates of existing components."},
+    {"id": "L1.3", "layer": "frontend", "enforced_by": "project", "rule": "Every component is showcased in all states: default, loading, empty, error, disabled."},
+    {"id": "L1.4", "layer": "frontend", "enforced_by": "project", "rule": "Visual regression against Designer-approved baselines. Only the Designer updates baselines."},
+    {"id": "L1.5", "layer": "frontend", "enforced_by": "project", "rule": "Layouts are verified at fixed breakpoints (360, 768, 1280, 1920)."},
+    {"id": "L2.1", "layer": "frontend", "enforced_by": "project", "rule": "Zero automated accessibility violations (WCAG 2.2 AA) on every page and component state.", "threshold": {"env": "FACTORY_MAX_A11Y_VIOLATIONS", "value": 0}},
+    {"id": "L2.2", "layer": "frontend", "enforced_by": "project", "rule": "Static accessibility lint passes."},
+    {"id": "L2.3", "layer": "frontend", "enforced_by": "project", "rule": "Every user flow is completable by keyboard alone with visible focus."},
+    {"id": "L2.4", "layer": "frontend", "enforced_by": "project", "rule": "Token colour contrast >= 4.5:1 for text and >= 3:1 for UI elements.", "threshold": {"env": "FACTORY_MIN_TEXT_CONTRAST", "value": 4.5}},
+    {"id": "L3.1", "layer": "frontend", "enforced_by": "project", "rule": "Strict typing with no escape hatches (no any / non-null assertions or the stack's equivalent)."},
+    {"id": "L3.2", "layer": "frontend", "enforced_by": "project", "rule": "The API client is generated from the API contract; no hand-written HTTP calls."},
+    {"id": "L3.3", "layer": "frontend", "enforced_by": "project", "rule": "Form validation is derived from the contract."},
+    {"id": "L3.4", "layer": "frontend", "enforced_by": "project", "rule": "No hard-coded user-facing strings; all text goes through i18n."},
+    {"id": "L3.5", "layer": "frontend", "enforced_by": "project", "rule": "No console/debug statements and no dead exports."},
+    {"id": "L3.7", "layer": "frontend", "enforced_by": "project", "rule": "Every route has an error boundary; every async view has loading and error states."},
+    {"id": "L4.1", "layer": "frontend", "enforced_by": "project", "rule": "Core Web Vitals on the target profile: LCP < 2.5s, CLS < 0.1, INP < 200ms.", "threshold": {"env": "FACTORY_MAX_LCP_MS", "value": 2500}},
+    {"id": "L4.2", "layer": "frontend", "enforced_by": "project", "rule": "JS shipped per route stays within budget (KB, gzipped).", "threshold": {"env": "FACTORY_MAX_ROUTE_JS_KB", "value": 170}},
+    {"id": "L5.1", "layer": "frontend", "enforced_by": "project", "rule": "No raw HTML injection or dynamic code evaluation in the client."},
+    {"id": "L5.2", "layer": "frontend", "enforced_by": "project", "rule": "Strict Content-Security-Policy: no unsafe-inline, no unsafe-eval."},
+    {"id": "L5.3", "layer": "frontend", "enforced_by": "project", "rule": "Auth tokens are never stored in web storage; httpOnly Secure SameSite cookies only."},
+    {"id": "L5.4", "layer": "frontend", "enforced_by": "project", "rule": "No third-party scripts unless allowlisted with integrity hashes."},
+    {"id": "L5.5", "layer": "frontend", "enforced_by": "project", "rule": "No secrets or internal URLs in the client bundle."},
+    {"id": "L6.1", "layer": "frontend", "enforced_by": "project", "rule": "Every acceptance criterion has an E2E test tagged with its requirement ID."},
+    {"id": "L6.2", "layer": "frontend", "enforced_by": "project", "rule": "E2E runs on the three major browser engines."},
+    {"id": "L6.3", "layer": "frontend", "enforced_by": "project", "rule": "E2E tests use no fixed sleeps, only condition-based waits."},
+
+    {"id": "S1", "layer": "all", "enforced_by": "factory", "rule": "The Cybersecurity Expert can veto any merge or release; only a human overrides a veto."},
+    {"id": "S2", "layer": "all", "enforced_by": "factory", "rule": "No release with any open critical or high security finding."},
+    {"id": "S3", "layer": "all", "enforced_by": "factory", "rule": "The Cybersecurity Expert specifies fixes but never writes code; developers fix, Security re-verifies."},
+    {"id": "S4", "layer": "all", "enforced_by": "factory", "rule": "Security fix tasks are claimed before all other tasks."},
+    {"id": "S5", "layer": "backend", "enforced_by": "project", "rule": "Every endpoint has an authorization test proving one user cannot reach another user's data."},
+    {"id": "S6", "layer": "all", "enforced_by": "project", "rule": "A software bill of materials is produced and dependencies are scanned for known vulnerabilities."},
+    {"id": "S9", "layer": "all", "enforced_by": "factory", "rule": "The Cybersecurity Expert runs in a fresh context on the reviewer model."}
+  ]
+}
