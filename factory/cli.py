@@ -76,17 +76,31 @@ def cmd_chat(p: Project) -> int:
         p.inbox.rename(p.state / f"inbox-read-{datetime.now(UTC):%Y%m%dT%H%M%S}.md")
 
     if f.state["phase"] == "prd" and (p.dir / PRD_PATH).exists():
-        answer = ask_human("Approve this PRD as the scope and let the factory build it?")
-        if answer:
-            f.ev.append("human_gate", {"gate": "gate1", "approved": True, "commit": git.head(p.dir)})
-            f.state["phase"] = "architecture"
-            f.save()
-            print(f"Scope approved. Start the build: factory run {p.name}")
+        approve_scope(f)
+    return 0
+
+
+def approve_scope(f: Factory) -> int:
+    """Gate 1: the human (at a terminal) approves the committed PRD as the scope."""
+    p = f.p
+    print((p.dir / PRD_PATH).read_text(encoding="utf-8")[:3000] + "\n...\n")
+    answer = ask_human(f"Approve {PRD_PATH} as the scope and let the factory build it?")
+    if answer is None:
+        sys.exit("approval needs an interactive terminal")
+    if answer:
+        f.ev.append("human_gate", {"gate": "gate1", "approved": True, "commit": git.head(p.dir)})
+        f.state["phase"] = "architecture"
+        f.save()
+        print(f"Scope approved. Start the build: factory run {p.name}")
+    else:
+        print(f"Not approved. Refine it with: factory chat {p.name}")
     return 0
 
 
 def cmd_approve(p: Project) -> int:
     f = Factory(p)
+    if f.state["phase"] == "prd" and (p.dir / PRD_PATH).exists() and not git.git(p.dir, "status", "--porcelain"):
+        return approve_scope(f)
     pending = [g for g in ("gate2", "gate3") if f.state.get(g) == "pending"]
     if not pending:
         print("Nothing is waiting for your approval.")
